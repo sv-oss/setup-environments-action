@@ -63,6 +63,13 @@ const project = new GitHubActionTypeScriptProject({
 // Build the project after upgrading so that the compiled JS ends up being committed
 project.tasks.tryFind('post-upgrade')?.spawn(project.buildTask);
 
+// Projen bug: generates deprecated `status-success` condition; override with the correct `check-success`
+// https://docs.mergify.com/configuration/conditions/#attributes-list
+const conditions = ['#approved-reviews-by>=1', '-label~=(do-not-merge)', 'check-success=build'];
+const mergifyFile = project.tryFindObjectFile('.mergify.yml');
+mergifyFile?.addOverride('queue_rules.0.queue_conditions', conditions);
+mergifyFile?.addOverride('pull_request_rules.0.conditions', conditions);
+
 project.release?.addJobs({
   'floating-tags': {
     permissions: {
