@@ -2,7 +2,6 @@ import { github, javascript } from 'projen';
 import { GitHubActionTypeScriptProject, RunsUsing } from 'projen-github-action-typescript';
 
 const project = new GitHubActionTypeScriptProject({
-
   defaultReleaseBranch: 'main',
   devDeps: [
     'projen-github-action-typescript',
@@ -10,7 +9,7 @@ const project = new GitHubActionTypeScriptProject({
   name: 'setup-environments-action',
   packageManager: javascript.NodePackageManager.NPM,
   projenrcTs: true,
-  minNodeVersion: '20.12.1',
+  minNodeVersion: '24.15.0',
   depsUpgradeOptions: {
     workflowOptions: {
       projenCredentials: github.GithubCredentials.fromApp({
@@ -36,7 +35,7 @@ const project = new GitHubActionTypeScriptProject({
     name: 'Setup Environments',
     description: 'Action to configures environments in a repository',
     runs: {
-      using: RunsUsing.NODE_20,
+      using: RunsUsing.NODE_20, // For v24, we need: https://github.com/projen/projen-github-action-typescript/pull/529
       main: 'dist/index.js',
     },
     inputs: {
@@ -72,7 +71,7 @@ project.release?.addJobs({
     runsOn: ['ubuntu-latest'],
     needs: ['release_github'],
     steps: [
-      { uses: 'actions/checkout@v4' },
+      { uses: 'actions/checkout@v6' },
       { uses: 'giantswarm/floating-tags-action@v1' },
     ],
   },
