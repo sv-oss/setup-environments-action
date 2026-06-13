@@ -65,31 +65,40 @@ async function adjustRepoAccessForReviewers(
   const octo = github.getOctokit(token);
   for (const envr of reviewers) {
     if (envr.type === 'Team') {
+      if (!envr.teamOrg) {
+        throw new Error(`team reviewer "${envr.name}" is missing team organization`);
+      }
+
+      const teamOrg = envr.teamOrg;
+
       try {
         core.debug(`checking if team ${envr.name} has permissions over the repository`);
         await octo.rest.teams.checkPermissionsForRepoInOrg({
           owner: repositoryOwner,
           repo: repositoryName,
-          org: envr.teamOrg!,
+          org: teamOrg,
           team_slug: envr.name,
         });
       } catch (e) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const error = e as any;
-        if (error.status && error.status === 404) {
+        if (isNotFoundError(e)) {
           core.info(`granting team ${envr.name} read permissions over the repository`);
           await octo.rest.teams.addOrUpdateRepoPermissionsInOrg({
             owner: repositoryOwner,
             repo: repositoryName,
-            org: envr.teamOrg!,
+            org: teamOrg,
             team_slug: envr.name,
             permission: 'pull',
           });
         } else {
-          throw error;
+          throw e;
         }
       }
     } else {
+      if (envr.accountType === 'Bot') {
+        core.info(`skipping collaborator grant for bot ${envr.name}; bots cannot be added as repository collaborators`);
+        continue;
+      }
+
       try {
         core.debug(`checking if user ${envr.name} has permissions over the repository`);
         await octo.rest.repos.checkCollaborator({
@@ -97,18 +106,30 @@ async function adjustRepoAccessForReviewers(
           repo: repositoryName,
           username: envr.name,
         });
-      } catch (error) {
-        core.info(`granting user ${envr.name} read permissions over the repository`);
-        await octo.rest.repos.addCollaborator({
-          owner: repositoryOwner,
-          repo: repositoryName,
-          username: envr.name,
-          permission: 'pull',
-        });
+      } catch (e) {
+        if (isNotFoundError(e)) {
+          core.info(`granting user ${envr.name} read permissions over the repository`);
+          await octo.rest.repos.addCollaborator({
+            owner: repositoryOwner,
+            repo: repositoryName,
+            username: envr.name,
+            permission: 'pull',
+          });
+        } else {
+          throw e;
+        }
       }
     }
   }
   return Promise.resolve();
+}
+
+function isNotFoundError(error: unknown): boolean {
+  if (typeof error !== 'object' || error === null || !('status' in error)) {
+    return false;
+  }
+
+  return (error as { status?: unknown }).status === 404;
 }
 
 async function getEnvReviewers(token: string, reviewers: string[]): Promise<EnvReviewer[]> {
@@ -148,6 +169,7 @@ async function getEnvReviewers(token: string, reviewers: string[]): Promise<EnvR
           type: 'User',
           id: user.data.id as number,
           name: rvwr,
+          accountType: user.data.type,
         });
       } catch (error) {
         throw new Error(`cannot resolve user "${rvwr}": ${error}`);
@@ -162,5 +184,6 @@ type EnvReviewer = {
   type: 'User' | 'Team';
   id: number;
   name: string;
+  accountType?: string;
   teamOrg?: string;
 };
