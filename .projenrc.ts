@@ -35,7 +35,9 @@ const project = new GitHubActionTypeScriptProject({
     name: 'Setup Environments',
     description: 'Action to configures environments in a repository',
     runs: {
-      using: RunsUsing.NODE_20, // For v24, we need: https://github.com/projen/projen-github-action-typescript/pull/529
+      // WARNING: This is a temp workaround to prevent the action breaking soon.
+      // Ideally, upgrade projen-github-action-typescript and use the proper `RunsUsing` enum when it's available
+      using: 'node24' as RunsUsing, // RunsUsing.NODE_24, // For v24, we need: https://github.com/projen/projen-github-action-typescript/pull/529
       main: 'dist/index.js',
     },
     inputs: {

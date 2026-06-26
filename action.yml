@@ -3,7 +3,7 @@
 name: Setup Environments
 description: Action to configures environments in a repository
 runs:
-  using: node20
+  using: node24
   main: dist/index.js
 author: Service Victoria Platform Engineering
 inputs:
