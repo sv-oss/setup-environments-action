@@ -70,8 +70,10 @@ const project = new GitHubActionTypeScriptProject({
   },
 });
 
-// Pin transitive dependencies with known advisories that don't yet have
-// upstream fixes available via direct package upgrades.
+// Constrain minimum versions of transitive dependencies with known advisories
+// that don't yet have upstream fixes available via direct package upgrades.
+// These are minimum-version constraints (caret ranges), not exact pins, so
+// patch/minor updates with the fixes will be picked up automatically.
 project.package.addField('overrides', {
   'undici': '^6.27.0',
   'fast-xml-parser': '^5.9.3',
@@ -82,7 +84,7 @@ project.package.addField('overrides', {
 
 // Configure vitest as the test runner
 const testTask = project.tasks.tryFind('test')!;
-testTask.reset('vitest run --passWithNoTests', { receiveArgs: true });
+testTask.reset('vitest run --coverage --passWithNoTests', { receiveArgs: true });
 const watchTask = project.tasks.tryFind('test:watch');
 if (watchTask) {
   watchTask.reset('vitest', { receiveArgs: true });
@@ -95,6 +97,12 @@ if (eslintTask) {
 project.addGitIgnore('/coverage/');
 project.addGitIgnore('/test-reports/');
 project.addGitIgnore('junit.xml');
+
+// Ensure test/coverage artifacts are never published to npm even if they
+// happen to be present in the working tree at pack/publish time.
+project.addPackageIgnore('/coverage/');
+project.addPackageIgnore('/test-reports/');
+project.addPackageIgnore('junit.xml');
 
 // Build the project after upgrading so that the compiled JS ends up being committed
 project.tasks.tryFind('post-upgrade')?.spawn(project.buildTask);

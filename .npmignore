@@ -19,6 +19,9 @@ dist
 tsconfig.tsbuildinfo
 /.eslintrc.json
 /projenrc/tsconfig.json
+/coverage/
+/test-reports/
+junit.xml
 /.gitattributes
 /.projenrc.ts
 /projenrc
