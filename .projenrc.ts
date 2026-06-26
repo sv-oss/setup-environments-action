@@ -5,6 +5,11 @@ const project = new GitHubActionTypeScriptProject({
   defaultReleaseBranch: 'main',
   devDeps: [
     'projen-github-action-typescript',
+    'vitest@^3',
+    '@vitest/coverage-v8@^3',
+  ],
+  deps: [
+    '@actions/core@^1.11.1',
   ],
   name: 'setup-environments-action',
   packageManager: javascript.NodePackageManager.NPM,
@@ -26,7 +31,6 @@ const project = new GitHubActionTypeScriptProject({
     ],
   },
   dependabot: false,
-  mutableBuild: false,
   minMajorVersion: 1,
   license: 'MIT',
   copyrightOwner: 'Service Victoria',
@@ -60,7 +64,37 @@ const project = new GitHubActionTypeScriptProject({
       },
     },
   },
+  jest: false,
+  buildWorkflowOptions: {
+    mutableBuild: false,
+  },
 });
+
+// Pin transitive dependencies with known advisories that don't yet have
+// upstream fixes available via direct package upgrades.
+project.package.addField('overrides', {
+  'undici': '^6.27.0',
+  'fast-xml-parser': '^5.9.3',
+  'fast-xml-builder': '^1.2.0',
+  'js-yaml': '^4.2.0',
+  '@actions/http-client': '^2.2.3',
+});
+
+// Configure vitest as the test runner
+const testTask = project.tasks.tryFind('test')!;
+testTask.reset('vitest run --passWithNoTests', { receiveArgs: true });
+const watchTask = project.tasks.tryFind('test:watch');
+if (watchTask) {
+  watchTask.reset('vitest', { receiveArgs: true });
+}
+const eslintTask = project.tasks.tryFind('eslint');
+if (eslintTask) {
+  testTask.spawn(eslintTask);
+}
+
+project.addGitIgnore('/coverage/');
+project.addGitIgnore('/test-reports/');
+project.addGitIgnore('junit.xml');
 
 // Build the project after upgrading so that the compiled JS ends up being committed
 project.tasks.tryFind('post-upgrade')?.spawn(project.buildTask);
