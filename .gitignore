@@ -31,9 +31,6 @@ jspm_packages/
 *.tgz
 .yarn-integrity
 .cache
-/test-reports/
-junit.xml
-/coverage/
 !/.github/workflows/build.yml
 !/.github/workflows/release.yml
 !/.mergify.yml
@@ -41,10 +38,14 @@ junit.xml
 !/.github/pull_request_template.md
 !/test/
 !/tsconfig.json
-!/tsconfig.dev.json
+!/test/tsconfig.json
 !/src/
 /lib
 !/.eslintrc.json
+!/projenrc/tsconfig.json
 !/dist/
 !/action.yml
+/coverage/
+/test-reports/
+junit.xml
 !/.projenrc.ts

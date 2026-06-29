@@ -6,10 +6,6 @@
       "type": "build"
     },
     {
-      "name": "@types/jest",
-      "type": "build"
-    },
-    {
       "name": "@types/node",
       "version": "^24",
       "type": "build"
@@ -26,6 +22,11 @@
     },
     {
       "name": "@vercel/ncc",
+      "type": "build"
+    },
+    {
+      "name": "@vitest/coverage-v8",
+      "version": "^3",
       "type": "build"
     },
     {
@@ -52,15 +53,6 @@
       "type": "build"
     },
     {
-      "name": "jest",
-      "type": "build"
-    },
-    {
-      "name": "jest-junit",
-      "version": "^17",
-      "type": "build"
-    },
-    {
       "name": "projen",
       "type": "build"
     },
@@ -69,15 +61,16 @@
       "type": "build"
     },
     {
-      "name": "ts-jest",
-      "type": "build"
-    },
-    {
       "name": "ts-node",
       "type": "build"
     },
     {
       "name": "typescript",
+      "type": "build"
+    },
+    {
+      "name": "vitest",
+      "version": "^3",
       "type": "build"
     },
     {
