@@ -237,13 +237,43 @@
       },
       "steps": [
         {
-          "exec": "npx npm-check-updates@20 --upgrade --target=minor --peer --no-deprecated --dep=dev,peer,prod,optional --filter=@vercel/ncc,eslint-import-resolver-typescript,eslint-plugin-import,projen,projen-github-action-typescript,ts-node,typescript,@actions/core,@actions/github"
+          "execArgs": [
+            "npx",
+            "npm-check-updates@20",
+            "--upgrade",
+            "--target=minor",
+            "--peer",
+            "--no-deprecated",
+            "--dep=dev,prod,peer,optional",
+            "--filter=@vercel/ncc,eslint-import-resolver-typescript,eslint-plugin-import,projen,projen-github-action-typescript,ts-node,typescript,@actions/core,@actions/github"
+          ]
         },
         {
           "exec": "npm install"
         },
         {
-          "exec": "npm update @stylistic/eslint-plugin @types/node @typescript-eslint/eslint-plugin @typescript-eslint/parser @vercel/ncc @vitest/coverage-v8 commit-and-tag-version constructs eslint-import-resolver-typescript eslint-plugin-import eslint projen projen-github-action-typescript ts-node typescript vitest @actions/core @actions/github"
+          "execArgs": [
+            "npm",
+            "update",
+            "@stylistic/eslint-plugin",
+            "@types/node",
+            "@typescript-eslint/eslint-plugin",
+            "@typescript-eslint/parser",
+            "@vercel/ncc",
+            "@vitest/coverage-v8",
+            "commit-and-tag-version",
+            "constructs",
+            "eslint-import-resolver-typescript",
+            "eslint-plugin-import",
+            "eslint",
+            "projen",
+            "projen-github-action-typescript",
+            "ts-node",
+            "typescript",
+            "vitest",
+            "@actions/core",
+            "@actions/github"
+          ]
         },
         {
           "exec": "npx projen"
