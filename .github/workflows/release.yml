@@ -95,11 +95,24 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: errout=$(mktemp); gh release create $(cat dist/releasetag.txt) -R $GITHUB_REPOSITORY -F dist/changelog.md -t $(cat dist/releasetag.txt) --target $GITHUB_SHA 2> $errout && true; exitcode=$?; if [ $exitcode -ne 0 ] && ! grep -q "Release.tag_name already exists" $errout; then cat $errout; exit $exitcode; fi
-  floating-tags:
-    needs: release_github
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v6
-      - uses: giantswarm/floating-tags-action@v1
+      - name: Update floating major tag
+        if: ${{ success() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |-
+          RELEASE_TAG=$(cat dist/releasetag.txt)
+          if [[ ! "$RELEASE_TAG" =~ ^v([0-9]+)\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Expected a stable v<major>.<minor>.<patch> release tag, got: $RELEASE_TAG" >&2
+            exit 1
+          fi
+          FLOATING_TAG="v${BASH_REMATCH[1]}"
+          ERROR_FILE=$(mktemp)
+          trap 'rm -f "$ERROR_FILE"' EXIT
+          if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$FLOATING_TAG" > /dev/null 2> "$ERROR_FILE"; then
+            gh api --method PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/$FLOATING_TAG" -f sha="$GITHUB_SHA" -F force=true
+          elif grep -q "HTTP 404" "$ERROR_FILE"; then
+            gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$FLOATING_TAG" -f sha="$GITHUB_SHA"
+          else
+            cat "$ERROR_FILE" >&2
+            exit 1
+          fi
