@@ -46,6 +46,11 @@ const project = new GitHubActionTypeScriptProject({
       'sv-oss-continuous-delivery[bot]',
     ],
   },
+  tsconfig: {
+    compilerOptions: {
+      lib: ['es2022'],
+    },
+  },
   dependabot: false,
   minMajorVersion: 1,
   license: 'MIT',
