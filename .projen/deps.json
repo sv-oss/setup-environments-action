@@ -26,7 +26,7 @@
     },
     {
       "name": "@vitest/coverage-v8",
-      "version": "^3",
+      "version": "^4",
       "type": "build"
     },
     {
@@ -70,15 +70,17 @@
     },
     {
       "name": "vitest",
-      "version": "^3",
+      "version": "^4",
       "type": "build"
     },
     {
       "name": "@actions/core",
+      "version": "^2.0.3",
       "type": "runtime"
     },
     {
       "name": "@actions/github",
+      "version": "^8.0.1",
       "type": "runtime"
     }
   ],

@@ -267,7 +267,7 @@
             "--peer",
             "--no-deprecated",
             "--dep=dev,prod,peer,optional",
-            "--filter=@vercel/ncc,eslint-import-resolver-typescript,eslint-plugin-import,projen,projen-github-action-typescript,ts-node,typescript,@actions/core,@actions/github"
+            "--filter=@vercel/ncc,eslint-import-resolver-typescript,eslint-plugin-import,projen,projen-github-action-typescript,ts-node,typescript"
           ]
         },
         {

@@ -1,27 +1,42 @@
 import { github, javascript } from 'projen';
+import { UpgradeDependenciesSchedule } from 'projen/lib/javascript';
 import { GitHubActionTypeScriptProject, RunsUsing } from 'projen-github-action-typescript';
+
+const projenCredentials = github.GithubCredentials.fromApp({
+  appIdSecret: 'CICD_APP_ID',
+  privateKeySecret: 'CICD_APP_PRIVKEY',
+});
 
 const project = new GitHubActionTypeScriptProject({
   defaultReleaseBranch: 'main',
   devDeps: [
     'projen-github-action-typescript',
-    'vitest@^3',
-    '@vitest/coverage-v8@^3',
-  ],
-  deps: [
-    '@actions/core@^1.11.1',
+    'vitest@^4',
+    '@vitest/coverage-v8@^4',
   ],
   name: 'setup-environments-action',
   packageManager: javascript.NodePackageManager.NPM,
   projenrcTs: true,
   minNodeVersion: '24.15.0',
+  // Projen's generated auto-queue workflow uses an action that requires both
+  // contents: write and pull-requests: write to enable auto-merge.
+  githubOptions: {
+    mergify: false,
+    mergeQueue: true,
+    mergeQueueOptions: {
+      targetBranches: ['main'],
+      autoQueueOptions: {
+        targetBranches: ['main'],
+        projenCredentials,
+      },
+    },
+    projenCredentials,
+  },
   depsUpgradeOptions: {
     workflowOptions: {
-      projenCredentials: github.GithubCredentials.fromApp({
-        appIdSecret: 'CICD_APP_ID',
-        privateKeySecret: 'CICD_APP_PRIVKEY',
-      }),
+      projenCredentials,
       labels: ['deps-upgrade'],
+      schedule: UpgradeDependenciesSchedule.WEEKLY,
     },
   },
   autoApproveOptions: {
@@ -29,6 +44,11 @@ const project = new GitHubActionTypeScriptProject({
     allowedUsernames: [
       'sv-oss-continuous-delivery[bot]',
     ],
+  },
+  tsconfig: {
+    compilerOptions: {
+      lib: ['es2022'],
+    },
   },
   dependabot: false,
   minMajorVersion: 1,
@@ -70,16 +90,16 @@ const project = new GitHubActionTypeScriptProject({
   },
 });
 
-// Constrain minimum versions of transitive dependencies with known advisories
-// that don't yet have upstream fixes available via direct package upgrades.
-// These are minimum-version constraints (caret ranges), not exact pins, so
-// patch/minor updates with the fixes will be picked up automatically.
+// Override the Action Toolkit ranges supplied by the project generator.
+project.addDeps('@actions/core@^2.0.3', '@actions/github@^8.0.1');
+
+// Security floors for transitive dependencies whose parent ranges still allow
+// vulnerable versions. Remove these once the parent ranges are raised:
+// @actions/github/@actions/http-client to undici >=6.27.0, and
+// commit-and-tag-version to fast-xml-parser >=5.9.3.
 project.package.addField('overrides', {
   'undici': '^6.27.0',
   'fast-xml-parser': '^5.9.3',
-  'fast-xml-builder': '^1.2.0',
-  'js-yaml': '^4.2.0',
-  '@actions/http-client': '^2.2.3',
 });
 
 // Configure vitest as the test runner
@@ -107,25 +127,41 @@ project.addPackageIgnore('junit.xml');
 // Build the project after upgrading so that the compiled JS ends up being committed
 project.tasks.tryFind('post-upgrade')?.spawn(project.buildTask);
 
-// Projen bug: generates deprecated `status-success` condition; override with the correct `check-success`
-// https://docs.mergify.com/configuration/conditions/#attributes-list
-const conditions = ['#approved-reviews-by>=1', '-label~=(do-not-merge)', 'check-success=build'];
-const mergifyFile = project.tryFindObjectFile('.mergify.yml');
-mergifyFile?.addOverride('queue_rules.0.queue_conditions', conditions);
-mergifyFile?.addOverride('pull_request_rules.0.conditions', conditions);
-
-project.release?.addJobs({
-  'floating-tags': {
-    permissions: {
-      contents: github.workflows.JobPermission.WRITE,
-    },
-    runsOn: ['ubuntu-latest'],
-    needs: ['release_github'],
-    steps: [
-      { uses: 'actions/checkout@v6' },
-      { uses: 'giantswarm/floating-tags-action@v1' },
-    ],
+// Add a step after release is pushed to github, to update the `v1/v2` Major Version tag
+// to point to the new release commit SHA
+project.release?.publisher.addGitHubPostPublishingSteps({
+  name: 'Update floating major tag',
+  // A dry run must not mutate the published floating tag.
+  if: '${{ success() && !inputs.dry_run }}',
+  env: {
+    GH_TOKEN: '${{ github.token }}',
   },
+  run: [
+    'RELEASE_TAG=$(cat dist/releasetag.txt)',
+    'if [[ ! "$RELEASE_TAG" =~ ^v([0-9]+)\\.[0-9]+\\.[0-9]+$ ]]; then',
+    '  echo "Expected a stable v<major>.<minor>.<patch> release tag, got: $RELEASE_TAG" >&2',
+    '  exit 1',
+    'fi',
+    'FLOATING_TAG="v${BASH_REMATCH[1]}"',
+    'ERROR_FILE=$(mktemp)',
+    'trap \'rm -f "$ERROR_FILE"\' EXIT',
+    'if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$FLOATING_TAG" > /dev/null 2> "$ERROR_FILE"; then',
+    '  gh api --method PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/$FLOATING_TAG" -f sha="$GITHUB_SHA" -F force=true',
+    'elif grep -q "HTTP 404" "$ERROR_FILE"; then',
+    '  gh api --method POST "repos/$GITHUB_REPOSITORY/git/refs" -f ref="refs/tags/$FLOATING_TAG" -f sha="$GITHUB_SHA"',
+    'else',
+    '  cat "$ERROR_FILE" >&2',
+    '  exit 1',
+    'fi',
+  ].join('\n'),
 });
+
+// Projen only enables auto-merge when a PR opens or changes base branch, even
+// though it subscribes to ready_for_review. Run for every non-draft PR so a
+// draft is automatically queued once it becomes ready for review.
+project.tryFindObjectFile('.github/workflows/auto-queue.yml')?.addOverride(
+  'jobs.enableAutoQueue.if',
+  'github.event.pull_request.draft == false',
+);
 
 project.synth();
