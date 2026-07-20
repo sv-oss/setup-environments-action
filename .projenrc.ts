@@ -14,9 +14,6 @@ const project = new GitHubActionTypeScriptProject({
     'vitest@^4',
     '@vitest/coverage-v8@^4',
   ],
-  deps: [
-    '@actions/core@^2.0.3',
-  ],
   name: 'setup-environments-action',
   packageManager: javascript.NodePackageManager.NPM,
   projenrcTs: true,
@@ -91,6 +88,7 @@ const project = new GitHubActionTypeScriptProject({
   },
 });
 
+// Override the Action Toolkit ranges supplied by the project generator.
 project.addDeps('@actions/core@^2.0.3', '@actions/github@^8.0.1');
 
 // Security floors for transitive dependencies whose parent ranges still allow
@@ -131,7 +129,7 @@ project.tasks.tryFind('post-upgrade')?.spawn(project.buildTask);
 // to point to the new release commit SHA
 project.release?.publisher.addGitHubPostPublishingSteps({
   name: 'Update floating major tag',
-  if: '${{ success() }}',
+  if: '${{ success() && !inputs.dry_run }}',
   env: {
     GH_TOKEN: '${{ github.token }}',
   },
