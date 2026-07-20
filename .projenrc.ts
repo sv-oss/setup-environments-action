@@ -18,6 +18,8 @@ const project = new GitHubActionTypeScriptProject({
   packageManager: javascript.NodePackageManager.NPM,
   projenrcTs: true,
   minNodeVersion: '24.15.0',
+  // Projen's generated auto-queue workflow uses an action that requires both
+  // contents: write and pull-requests: write to enable auto-merge.
   githubOptions: {
     mergify: false,
     mergeQueue: true,
@@ -129,6 +131,7 @@ project.tasks.tryFind('post-upgrade')?.spawn(project.buildTask);
 // to point to the new release commit SHA
 project.release?.publisher.addGitHubPostPublishingSteps({
   name: 'Update floating major tag',
+  // A dry run must not mutate the published floating tag.
   if: '${{ success() && !inputs.dry_run }}',
   env: {
     GH_TOKEN: '${{ github.token }}',
