@@ -25,7 +25,8 @@ jobs:
         with:
           app-id: ${{ secrets.CICD_APP_ID }}
           private-key: ${{ secrets.CICD_APP_PRIVKEY }}
-      - uses: peter-evans/enable-pull-request-automerge@v3
+      - id: auto_edce8315
+        uses: peter-evans/enable-pull-request-automerge@v3
         with:
           token: ${{ steps.generate_token.outputs.token }}
           pull-request-number: ${{ github.event.number }}
