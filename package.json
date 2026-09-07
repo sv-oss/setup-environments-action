@@ -43,7 +43,7 @@
     "@actions/github": "^8.0.1"
   },
   "overrides": {
-    "undici": "^6.27.0",
+    "undici": "^6.28.1",
     "fast-xml-parser": "^5.9.3"
   },
   "engines": {
